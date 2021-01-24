@@ -9,7 +9,7 @@ const bodyParser = require('body-parser');
 const app = express();
 const http = require('http').createServer(app);
 
-const port = 3000;
+const port = process.env.PORT;
 const io = require('socket.io')(http);
 
 mongoose.connect(process.env.DB_URI, { useNewUrlParser: true, useUnifiedTopology: true });

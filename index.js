@@ -1,3 +1,6 @@
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
 const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
@@ -9,7 +12,7 @@ const http = require('http').createServer(app);
 const port = 3000;
 const io = require('socket.io')(http);
 
-mongoose.connect('mongodb://localhost:27017/socketdb', { useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect(process.env.DB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
 
 var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
@@ -36,7 +39,6 @@ var users = [];
 var dbMessages = [];
 
 io.on('connection', (client) => {
-  console.log(client.id)
   var addr = client.handshake.address;
   console.log('New connection from ' + addr);
   defaultName = `Guest${guestNr}`;

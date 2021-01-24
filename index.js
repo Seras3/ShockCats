@@ -12,11 +12,38 @@ const http = require('http').createServer(app);
 const port = process.env.PORT;
 const io = require('socket.io')(http);
 
-mongoose.connect(process.env.DB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
-
 var db = mongoose.connection;
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
-db.on('connected', () => console.log('Succesfully connected to MongoDB!'));
+
+mongoose.Promise = Promise
+
+db.on('connected', () => {
+  console.log('Connection Established')
+})
+
+db.on('reconnected', () => {
+  console.log('Connection Reestablished')
+})
+
+db.on('disconnected', () => {
+  console.log('Connection Disconnected')
+})
+
+db.on('close', () => {
+  console.log('Connection Closed')
+})
+
+db.on('error', (error) => {
+  console.log('ERROR: ' + error)
+})
+
+const runDB = async () => {
+  await mongoose.connect(process.env.DB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  });
+};
+
+runDB().catch(error => console.error(error));
 
 const TempMessage = require('./models/tempmessage.js');
 

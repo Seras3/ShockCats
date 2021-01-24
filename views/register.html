@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Register</title>
+  <link rel="stylesheet" href="/styles/register.css">
+</head>
+
+<body>
+  <h1>Register to magical chat !</h1>
+  <form id="form">
+    <input id="input" type="text" name="username" />
+    <button id="submit">Register</button>
+  </form>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    var socket = io();
+
+    var body = document.getElementsByTagName('body')[0];
+    var form = document.getElementById('form');
+    var input = document.getElementById('input');
+    var submit = document.getElementById('submit');
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (input) {
+        socket.emit("new user", input.value);
+      }
+      window.location.replace('http://seras-pc:3000/');
+    });
+
+    getRandomInt = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
+
+    getRandomColor = function () {
+      var R = getRandomInt(0, 255);
+      var G = getRandomInt(0, 255);
+      var B = getRandomInt(0, 255);
+      return (`rgb(${R},${G},${B})`);
+    }
+
+    window.onload = function () {
+      setInterval(function () {
+        body.setAttribute('style', `background-color: ${getRandomColor()}`);
+      }, 1000);
+    }
+  </script>
+</body>
+
+</html>

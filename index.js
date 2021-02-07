@@ -5,6 +5,7 @@ const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const assert = require('assert');
 
 const app = express();
 const http = require('http').createServer(app);
@@ -12,40 +13,34 @@ const http = require('http').createServer(app);
 const port = process.env.PORT;
 const io = require('socket.io')(http);
 
-var db = mongoose.connection;
+mongoose.connect(process.env.DB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .catch(error => console.log('DB_ERROR: ' + error));
 
-mongoose.Promise = Promise
+const db = mongoose.connection;
+
 
 db.on('connected', () => {
-  console.log('Connection Established')
+  console.log('DB: Connection Established')
 })
 
 db.on('reconnected', () => {
-  console.log('Connection Reestablished')
+  console.log('DB: Connection Reestablished')
 })
 
 db.on('disconnected', () => {
-  console.log('Connection Disconnected')
+  console.log('DB: Connection Disconnected')
 })
 
 db.on('close', () => {
-  console.log('Connection Closed')
+  console.log('DB: Connection Closed')
 })
 
 db.on('error', (error) => {
-  console.log('ERROR: ' + error)
+  console.log('DB_ERROR: ' + error)
 })
 
-const runDB = async () => {
-  await mongoose.connect(process.env.DB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  });
-};
-
-runDB().catch(error => console.error(error));
-
 const TempMessage = require('./models/tempmessage.js');
+const User = require('./models/user.js');
 
 app.use(express.static(__dirname + '/public'));
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -65,33 +60,63 @@ var defaultName;
 var users = [];
 var dbMessages = [];
 
+function addUser(username, address) {
+  User.create({ username: username, address: address })
+    .catch(err => console.log("CREATE_USER_ERROR:" + err));
+}
+
+function updateUsername(oldUsername, newUsername) {
+  User.updateOne({ username: oldUsername }, { $set: { username: newUsername } })
+    .catch(err => console.log("UPDATE_USER_ERROR:" + err));
+}
+
 io.on('connection', (client) => {
   var addr = client.handshake.address;
-  console.log('New connection from ' + addr);
-  defaultName = `Guest${guestNr}`;
-  client.username = defaultName;
-  guestNr = guestNr + 1;
-  TempMessage.find({}, { username: 1, content: 1, _id: 0 }, (err, res) => {
-    if (err) { console.error(err) }
+
+  User.find({ address: addr }, (err, res) => {
+    if (err) { console.log(err) }
     else {
-      dbMessages = [...res];
-      io.sockets.to(client.id).emit('load messages', dbMessages);
+      if (res.length === 0) {
+        console.log("User nou: " + addr);
+        guestNr = guestNr + 1;
+        defaultName = `Guest${guestNr}`;
+        addUser(defaultName, addr);
+        client.username = defaultName;
+        users = [...users, defaultName];
+      }
+      else {
+        console.log("User vechi:" + res[0].username);
+        client.username = res[0].username;
+        users = [...users, client.username];
+      }
+
+      client.broadcast.emit('chat message', `${client.username} connected`, true);
+
+      assert(client.username !== undefined);
+
+      TempMessage.find({}, { username: 1, content: 1, _id: 0 }, (err, res) => {
+        if (err) { console.error(err) }
+        else {
+          dbMessages = [...res];
+          io.sockets.to(client.id).emit('load messages', dbMessages);
+          io.sockets.to(client.id).emit('load nickname', client.username);
+        }
+      })
     }
   });
-  client.broadcast.emit('chat message', `${defaultName} connected`, true);
-  users = [...users, defaultName];
 
-  client.on('new user', (username) => {
+  client.on('change nickname', (username) => {
     var existName = users.findIndex(el => el == username);
     if (username != client.username) {
       if (existName != -1) {
         io.emit('chat message', `Hey ${username}, ${client.username} wanted to steal your identity. Poor him :D`);
       }
       else {
+        updateUsername(client.username, username);
         io.emit('chat message', `${client.username} changed name to ${username}`, true);
+        console.log(`${client.username} changed name to ${username}`);
         users[users.findIndex(el => el == client.username)] = username;
         client.username = username;
-        console.log(`${client.username} changed name to ${username}`);
       }
     }
   });
@@ -104,7 +129,7 @@ io.on('connection', (client) => {
       else {
         io.emit('chat message', `${client.username} : ${msg}`);
         TempMessage.create({ username: client.username, content: msg }, (err) => {
-          if (err) return handleError(err);
+          if (err) return console.log("CREATE_MESSAGE_ERROR:" + err);
         });
       }
       console.log(`{ username: '${client.username}', message: ${msg} } `);

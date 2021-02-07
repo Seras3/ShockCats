@@ -17,7 +17,7 @@ form.addEventListener('submit', function (e) {
 form2.addEventListener('submit', function (e) {
   e.preventDefault();
   if (input2.value) {
-    socket.emit("new user", input2.value);
+    socket.emit("change nickname", input2.value);
   }
 });
 
@@ -29,6 +29,10 @@ socket.on('load messages', function (dbmessages) {
     messages.appendChild(item);
   }
   window.scrollTo(0, document.body.scrollHeight);
+});
+
+socket.on('load nickname', function (username) {
+  input2.value = username;
 });
 
 socket.on('chat message', function (msg) {

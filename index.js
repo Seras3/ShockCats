@@ -70,7 +70,7 @@ function updateUsername(oldUsername, newUsername) {
     .catch(err => console.log("UPDATE_USER_ERROR:" + err));
 }
 
-io.on('connection', (client) => {
+io.on('connection', async (client) => {
   var addr = client.handshake.address;
 
   User.find({ address: addr }, (err, res) => {
@@ -98,12 +98,13 @@ io.on('connection', (client) => {
         if (err) { console.error(err) }
         else {
           dbMessages = [...res];
-          io.sockets.to(client.id).emit('load messages', dbMessages);
-          io.sockets.to(client.id).emit('load nickname', client.username);
+          io.sockets.to(client.id).emit('load chat', dbMessages, client.username);
         }
       })
     }
   });
+
+
 
   client.on('change nickname', (username) => {
     var existName = users.findIndex(el => el == username);

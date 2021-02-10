@@ -6,6 +6,10 @@ var form2 = document.getElementById('form2');
 var input = document.getElementById('input');
 var input2 = document.getElementById('input2');
 
+function loadDone() {
+  document.body.style.display = "block";
+}
+
 form.addEventListener('submit', function (e) {
   e.preventDefault();
   if (input.value) {
@@ -21,19 +25,18 @@ form2.addEventListener('submit', function (e) {
   }
 });
 
-socket.on('load messages', function (dbmessages) {
+socket.on('load chat', function (dbmessages, username) {
   var item;
+  input2.value = username;
   for (message of dbmessages) {
     item = document.createElement('li');
     item.textContent = `${message.username} : ${message.content}`;
     messages.appendChild(item);
   }
   window.scrollTo(0, document.body.scrollHeight);
+  loadDone();
 });
 
-socket.on('load nickname', function (username) {
-  input2.value = username;
-});
 
 socket.on('chat message', function (msg) {
   var item = document.createElement('li');
